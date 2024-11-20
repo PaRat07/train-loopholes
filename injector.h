@@ -7,31 +7,31 @@ struct Wrapper {};
 template<template<typename> typename>
 struct TemplWrapper {};
 
-template <typename... Ts>
+template<typename... Ts>
 struct TypeList {};
 
-template <typename T>
+template<typename T>
 struct TypeList<T> {
-    using Type = T;
+  using Type = T;
 };
 
-template <typename... Ts>
-consteval auto operator==(const TypeList<Ts...>&, const TypeList<Ts...>&) -> bool {
-    return true;
+template<typename... Ts>
+consteval auto operator==(const TypeList<Ts...> &, const TypeList<Ts...> &) -> bool {
+  return true;
 };
 
-template <typename... Ts, typename... TTs>
-consteval auto operator==(const TypeList<Ts...>&, const TypeList<TTs...>&) -> bool {
-    return false;
+template<typename... Ts, typename... TTs>
+consteval auto operator==(const TypeList<Ts...> &, const TypeList<TTs...> &) -> bool {
+  return false;
 };
 
-template <auto I>
+template<auto I>
 struct Getter {
-    friend constexpr auto Magic(Getter<I>);
+  friend constexpr auto Magic(Getter<I>);
 };
 
-template <auto I, auto Value>
+template<auto I, auto Value>
 struct Injector {
-    friend constexpr auto Magic(Getter<I>) {return Value;};
+  friend constexpr auto Magic(Getter<I>) { return Value; };
 };
 } // namespace impl
