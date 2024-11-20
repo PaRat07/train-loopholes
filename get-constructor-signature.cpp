@@ -41,6 +41,23 @@ struct SimpleCaster {
     constexpr operator T&();
 };
 
+template<typename ToTest, std::size_t CurAns = 0, std::size_t... AmountHolder>
+consteval std::size_t GetTypesAmount() {
+    if constexpr (!requires {
+        InvocableWith<ToTest>({ (AmountHolder, SimpleCaster<ToTest>{})... });
+    }) {
+        return GetTypesAmount<ToTest, CurAns + 1, AmountHolder..., 0>();
+    } else {
+        return CurAns;
+    }
+}
+
+template<typename ToTest>
+consteval auto GetConstructorTypes() {
+    static constexpr std::size_t args_amount = GetTypesAmount<ToTest>();
+    return GetTypesForKnownAmount<ToTest, args_amount>();
+}
+
 
 
 
@@ -70,5 +87,5 @@ int main() {
     //     InvocableWith<ToAsk>({Caster<ToAsk, Wrapper<0>>{}});
     // });
     // PrintTypes(Magic(Getter<Wrapper<0>{}>{}));
-    PrintTypes(GetTypesForKnownAmount<ToAsk, 1>());
+    PrintTypes(GetConstructorTypes<ToAsk>());
 }
