@@ -76,7 +76,7 @@ struct ToAsk {
 };
 
 template<typename... Ts>
-void PrintTypes(TypeList<Ts...>) {
+void PrintTypes(impl::TypeList<Ts...>) {
   std::println(__PRETTY_FUNCTION__);
 }
 
