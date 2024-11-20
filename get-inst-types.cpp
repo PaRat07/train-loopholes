@@ -60,6 +60,7 @@ constexpr int ConstexprFunc(auto x) {
 }
 
 int main() {
+  // can print something like: void PrintTypes(impl::TypeList<Ts...>) [Ts = <int, char, impl::InstancesSaver<(lambda at *path*/train-loopholes/get-inst-types.cpp:63:35)>>]
   PrintTypes(GetInstantiatedTypes([]<typename T> {
     ConstexprFunc(T{});
   }));

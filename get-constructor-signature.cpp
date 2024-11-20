@@ -81,13 +81,6 @@ void PrintTypes(impl::TypeList<Ts...>) {
 }
 
 int main() {
-  // auto _ = Injector<TypeList<ToAsk, Wrapper<0>>{}, TypeList<ToAsk, TypeList<ToAsk, Wrapper<0>>>{}>{};
-  // [] (ToAsk&&) {} ({ Caster<ToAsk, TypeList<ToAsk, Wrapper<0>>>{} });
-  // auto _ = Injector<TypeList<ToAsk, Wrapper<0>>{}, TypeList<int, TypeList<ToAsk, Wrapper<0>>>{}>{};
-  // ToAsk _ = { Caster<ToAsk, TypeList<ToAsk, Wrapper<0>>>{} };
-  // static_assert(requires {
-  //     InvocableWith<ToAsk>({Caster<ToAsk, Wrapper<0>>{}});
-  // });
-  // PrintTypes(Magic(Getter<Wrapper<0>{}>{}));
+  // can print something like: void PrintTypes(impl::TypeList<Ts...>) [Ts = <T>]
   PrintTypes(GetConstructorTypes<ToAsk>());
 }
