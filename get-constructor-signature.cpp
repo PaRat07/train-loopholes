@@ -3,14 +3,14 @@
 #include <print>
 #include <utility>
 
-
+namespace impl {
 template<typename NotTo, typename Uniquefy>
 struct Caster {
     template<typename T, auto =
         Injector<
             std::conditional_t<std::is_same_v<T, NotTo>, TypeList<NotTo, void>, Uniquefy>{},
             TypeList<T>{}
-        >{}
+    >{}
     > requires (!std::is_same_v<NotTo, T>)
     constexpr operator T();
 };
@@ -51,11 +51,12 @@ consteval std::size_t GetTypesAmount() {
         return CurAns;
     }
 }
+} // namespace impl
 
 template<typename ToTest>
 consteval auto GetConstructorTypes() {
-    static constexpr std::size_t args_amount = GetTypesAmount<ToTest>();
-    return GetTypesForKnownAmount<ToTest, args_amount>();
+    static constexpr std::size_t args_amount = impl::GetTypesAmount<ToTest>();
+    return impl::GetTypesForKnownAmount<ToTest, args_amount>();
 }
 
 

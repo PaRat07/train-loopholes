@@ -1,5 +1,6 @@
 #pragma once
 
+namespace impl {
 template<auto>
 struct Wrapper {};
 
@@ -33,3 +34,4 @@ template <auto I, auto Value>
 struct Injector {
     friend constexpr auto Magic(Getter<I>) {return Value;};
 };
+} // namespace impl
