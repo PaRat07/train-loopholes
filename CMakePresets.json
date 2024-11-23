@@ -25,7 +25,7 @@
         "CMAKE_C_COMPILER" : "/usr/bin/clang-20",
         "CMAKE_CXX_COMPILER" : "/usr/bin/clang++-20",
         "CMAKE_LINKER_TYPE" : "LLD",
-        "CMAKE_CXX_FLAGS" : "-std=c++2c -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL -stdlib=libc++"
+        "CMAKE_CXX_FLAGS" : "-std=c++2c -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL -stdlib=libc++ -ftemplate-backtrace-limit=0"
       }
     },
     {
