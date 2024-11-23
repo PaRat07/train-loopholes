@@ -111,8 +111,6 @@ auto ForEach(std::integer_sequence<T, Vals...>, auto func, auto merger) {
 
 struct TypeIdTag {};
 
-} // namespace impl
-
 template<typename T, auto = (impl::AddToSet<impl::TypeIdTag, T>(), 0)>
 constexpr std::size_t kTypeId = impl::OrderOfKey<impl::TypeIdTag, T>();
 
@@ -148,19 +146,20 @@ struct TypeInfo {
   std::array<bool, TsCnt> depend_on;
 };
 
+} // namespace impl
+
 
 template<typename... Ts>
 consteval auto GetSortedTypes() {
-  static_assert(requires { (kTypeId<Ts>, ...); });
+  static_assert(requires { (impl::kTypeId<Ts>, ...); });
   static constexpr std::tuple types_depths = {
-    GetConstructorTypes<Ts>()...
+    impl::GetConstructorTypes<Ts>()...
   };
   return [] <std::size_t CurInd = 0, typename... HaveTypes> (this auto self) {
     if constexpr (CurInd != sizeof...(Ts)) {
       static constexpr std::size_t ind_of_first_can = [] <std::size_t cur_ind = 0> (this auto self_inside) {
-        // static_assert((impl::TypeList<HaveTypes...>{}, 52, decltype(std::get<cur_ind>(types_depths)){}, sizeof...(HaveTypes) != 4 || cur_ind != 0));
-        if constexpr (!kIsSubListByObjects<impl::TypeList<HaveTypes...>{}, std::get<cur_ind>(types_depths)> ||
-                      kIsSubList<impl::TypeList<HaveTypes...>, impl::TypeList<Ts...[cur_ind]>>) {
+        if constexpr (!impl::kIsSubListByObjects<impl::TypeList<HaveTypes...>{}, std::get<cur_ind>(types_depths)> ||
+                      impl::kIsSubList<impl::TypeList<HaveTypes...>, impl::TypeList<Ts...[cur_ind]>>) {
           return self_inside.template operator()<cur_ind + 1>();
         } else {
           return cur_ind;
