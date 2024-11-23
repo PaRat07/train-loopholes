@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 
 namespace impl {
 template<auto>
@@ -8,7 +9,10 @@ template<template<typename> typename>
 struct TemplWrapper {};
 
 template<typename... Ts>
-struct TypeList {};
+struct TypeList {
+  template<std::size_t TInd>
+  using IthType = Ts...[TInd];
+};
 
 template<typename T>
 struct TypeList<T> {

@@ -6,11 +6,23 @@
 #include <utility>
 #include <expected>
 #include <optional>
+#include <algorithm>
 
 template<typename>
 struct CasterTag {};
 
 namespace impl {
+template<typename LT, typename RT>
+struct ImplMergeLists;
+
+template<typename... LTs, typename... RTs>
+struct ImplMergeLists<impl::TypeList<LTs...>, impl::TypeList<RTs...>> {
+  using type = impl::TypeList<LTs..., RTs...>;
+};
+
+template<typename LT, typename RT>
+using kMergeLists = typename ImplMergeLists<LT, RT>::type;
+
 template<typename NotTo, typename Uniquefy>
 struct Caster {
   template<typename T, auto =
@@ -104,82 +116,66 @@ struct TypeIdTag {};
 template<typename T, auto = (impl::AddToSet<impl::TypeIdTag, T>(), 0)>
 constexpr std::size_t kTypeId = impl::OrderOfKey<impl::TypeIdTag, T>();
 
+template<std::size_t Ind>
+using kTypeById = typename decltype(impl::GetFromSet<impl::TypeIdTag, Ind>())::Type;
+
+template<typename T>
+constexpr auto kIndsOfTypesInList = [] <typename... Ts> (impl::TypeList<Ts...>) {
+  return std::index_sequence<kTypeId<Ts>...>{};
+} (T{});
+
+template<typename In, typename What>
+constexpr bool kIsSubList = [] <std::size_t... InIs, std::size_t... WhatIs> (std::index_sequence<InIs...>, std::index_sequence<WhatIs...>) {
+  std::array<std::size_t, sizeof...(InIs)> inis_sorted = { InIs... };
+  std::array<std::size_t, sizeof...(WhatIs)> whatis_sorted = { WhatIs... };
+  std::ranges::sort(inis_sorted);
+  std::ranges::sort(whatis_sorted);
+  return std::ranges::includes(inis_sorted, whatis_sorted);
+} (kIndsOfTypesInList<In>, kIndsOfTypesInList<What>);
+
+template<auto In, auto What>
+constexpr bool kIsSubListByObjects = kIsSubList<std::decay_t<decltype(In)>, std::decay_t<decltype(What)>>;
+
 template<typename ToTest>
 consteval auto GetConstructorTypes() {
   static constexpr std::size_t args_amount = impl::GetTypesAmount<ToTest>();
   return impl::GetTypesForKnownAmount<ToTest, args_amount>();
 }
 
+template<std::size_t TsCnt>
 struct TypeInfo {
   std::size_t id;
-  std::vector<std::size_t> dependencies;
+  std::array<bool, TsCnt> depend_on;
 };
 
-
-consteval bool HasCycles(std::size_t from,
-                         const std::vector<std::vector<std::size_t>> &graph,
-                         std::vector<bool> &used,
-                         std::vector<bool> &processed,
-                         std::vector<std::size_t> &ans) {
-  if (used[from]) {
-    return false;
-  } else if (!processed[from]) {
-    return true;
-  }
-  used[from] = true;
-  processed[from] = false;
-  for (std::size_t i : graph[from]) {
-    if (HasCycles(i, graph, used, processed, ans)) {
-      return true;
-    }
-  }
-  processed[from] = true;
-  ans.push_back(from);
-  return false;
-}
 
 template<typename... Ts>
-consteval std::array<TypeInfo, sizeof...(Ts)> GetTypeInfo() {
-  return {
-    TypeInfo {
-      .id = kTypeId<Ts>,
-      .dependencies = [] <typename... Dependencies> (impl::TypeList<Dependencies...>) {
-        return std::vector<std::size_t> { kTypeId<Dependencies>... };
-      } (GetConstructorTypes<Ts>())
-  }...
-};
-}
-
-template<std::size_t TsCnt>
-std::optional<std::array<std::size_t, TsCnt>> TopoligicallySort(std::array<TypeInfo, TsCnt> ts_info) {
-  std::vector<std::vector<std::size_t>> graph(ts_info.size());
-  for (auto &[ind, val] : ts_info) {
-    graph[ind] = val;
-  }
-  std::vector<bool> used(graph.size(), false);
-  std::vector<bool> processed(graph.size(), true);
-  std::vector<std::size_t> ans;
-  for (std::size_t i : std::views::iota(0uz, graph.size())) {
-    if (HasCycles(0, graph, used, processed, ans)) {
-      return std::nullopt;
-    }
-  }
-  std::array<std::size_t, TsCnt> ans_arr{};
-  std::ranges::copy(ans, ans_arr.begin());
-
-  return ans_arr;
-}
-
-template<typename... Types>
 consteval auto GetSortedTypes() {
-  static constexpr auto maybe_sorted_inds = TopoligicallySort(GetTypeInfo<Types...>());
-  static_assert(maybe_sorted_inds.has_value(), "Cyclic dependency detected");
-  static constexpr auto sorted_inds = *maybe_sorted_inds;
-  // return sorted_inds;
-  return [] <std::size_t... Inds> (std::index_sequence<Inds...>) {
-    return impl::TypeList<Types...[sorted_inds[Inds]]...>{};
-  } (std::make_index_sequence<sizeof...(Types)>{});
+  static_assert(requires { (kTypeId<Ts>, ...); });
+  static constexpr std::tuple types_depths = {
+    GetConstructorTypes<Ts>()...
+  };
+  return [] <std::size_t CurInd = 0, typename... HaveTypes> (this auto self) {
+    if constexpr (CurInd != sizeof...(Ts)) {
+      static constexpr std::size_t ind_of_first_can = [] <std::size_t cur_ind = 0> (this auto self_inside) {
+        // static_assert((impl::TypeList<HaveTypes...>{}, 52, decltype(std::get<cur_ind>(types_depths)){}, sizeof...(HaveTypes) != 4 || cur_ind != 0));
+        if constexpr (!kIsSubListByObjects<impl::TypeList<HaveTypes...>{}, std::get<cur_ind>(types_depths)> ||
+                      kIsSubList<impl::TypeList<HaveTypes...>, impl::TypeList<Ts...[cur_ind]>>) {
+          return self_inside.template operator()<cur_ind + 1>();
+        } else {
+          return cur_ind;
+        }
+      } ();
+      return impl::kMergeLists<
+                impl::TypeList<Ts...[ind_of_first_can]>,
+                decltype(self.template operator()<CurInd + 1, HaveTypes..., Ts...[ind_of_first_can]>())
+      >{};
+    } else {
+      return impl::TypeList<>{};
+    }
+  } ();
 }
+
 
 // USER CODE
 
@@ -187,8 +183,12 @@ struct T {
   T(int) {}
 };
 
+struct Z {
+  Z(double) {}
+};
+
 struct ToAsk {
-  ToAsk(T) {}
+  ToAsk(const T&, const Z&) {}
 };
 
 template<typename... Ts>
@@ -198,6 +198,6 @@ void PrintTypes(impl::TypeList<Ts...>) {
 
 int main() {
   // can print something like: void PrintTypes(impl::TypeList<Ts...>) [Ts = <T>]
-  PrintTypes(GetConstructorTypes<ToAsk>());
-  std::print("{}", TopoligicallySort<3>(GetTypeInfo<int, T, ToAsk>).value());
+  // PrintTypes(GetConstructorTypes<T>());
+  PrintTypes(GetSortedTypes<int, ToAsk, T, Z, double>());
 }
